@@ -4,11 +4,11 @@ import argparse
 import collections
 import datetime
 import tweepy
+import re as regex
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-
 from tqdm import tqdm
 
 try:
@@ -19,16 +19,19 @@ except ImportError:
 from auth import CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET
 
 
-"""User-friendly command-line interface"""
+
+"""Define command-line args"""
 parser = argparse.ArgumentParser(description="Twitter Profile Analyzer (https://github.com/nav97/Tweet-Analyzer)",
                                  usage="-n <screen_name> [options]")
 
 parser.add_argument('-n', '--name', required=True, metavar="screen_name", 
-                    help='target screen_name')
+                    help='The specified twitter user screen name')
 parser.add_argument('-l', '--limit', metavar='N', type=int, default=1000, 
-                    help='limit the number of tweets to retreive (default=1000)')
+                    help='Specify the number of tweets to retreive going back from the latest tweet (default to 1000)')
 parser.add_argument('--utc-offset', type=int,
-                    help='manually apply a timezone offset (in seconds)')
+                    help='Apply timezone offset (in seconds)')
+parser.add_argument('--no-timezone', action='store_true',
+                    help='Remove timezone auto-adjustment (default to UTC)')
 
 args = parser.parse_args()
 
@@ -36,38 +39,36 @@ args = parser.parse_args()
 startDate = 0
 endDate = 0
 
-
 detectedUrls = collections.Counter()
-detectedRetweets = collections.Counter()
 detectedHashtags = collections.Counter()
 mentionedUsers = collections.Counter()
 retweetedUsers = collections.Counter()
 detetctedLocations = collections.Counter()
-detectedLanguages = collections.Counter()
+detectedDevices = collections.Counter()
 
-
-hourlyActivity = {"%.2d:00" %hour: 0 for hour in range (24)}
-weeklyActivity = {"%s" %day: 0 for day in range(7)}
 activityMatrix = np.zeros((7, 24))
+
 
 
 """ Process and analyze a single tweet, updating our data"""
 def process_tweet(tweet):
-    global startDate    #BAD needs to be changed asap
+    global startDate
     global endDate
 
-    #Get date range of tweets (start at most recent tweet)
+    #Date in UTC
     dateOfTweet = tweet.created_at
+    
+    #Adjust time based off user specified offset which overrides profile settings
+    if(args.utc_offset):
+        dateOfTweet = (tweet.created_at + datetime.timedelta(seconds=args.utc_offset))
+    
+    #Auto adjust time based off user profile location
+    elif(tweet.user.utc_offset and not args.no_timezone):
+        dateOfTweet = (tweet.created_at + datetime.timedelta(seconds=tweet.user.utc_offset))
+
+    #Range of tweets analyzed in specified timezone
     endDate = endDate or dateOfTweet
     startDate = dateOfTweet
-    
-    #Update time based off timezone and specified offset
-
-    #Update hourly activity -> Goes to graph
-    hourlyActivity["%.2d:00" %dateOfTweet.hour] += 1
-
-    #Update weekly activity -> Goes to graph
-    weeklyActivity[str(dateOfTweet.weekday())] += 1
 
     #Update activityMatrix for heatmap
     activityMatrix[dateOfTweet.weekday()][dateOfTweet.hour] += 1
@@ -76,6 +77,7 @@ def process_tweet(tweet):
     if(tweet.entities['urls']):
         for url in tweet.entities['urls']:
             domain = urlparse(url['expanded_url']).netloc
+            domain = regex.sub('www.', '', domain)
             detectedUrls[domain] += 1 if (domain != "twitter.com") else (0)
 
     #Update Retweets
@@ -93,31 +95,54 @@ def process_tweet(tweet):
             mentionedUsers[user['screen_name']] += 1
 
     #Update detetcted locations
-
-    #Update detected languages
+    if(tweet.place):
+        detetctedLocations[tweet.place.name] += 1
 
     #Update detected devices
+    detectedDevices[tweet.source] += 1
 
 
 
 """ Download Tweets from user account """
 def get_tweets(api, user, limit):
-    for tweet in tqdm(tweepy.Cursor(api.user_timeline, screen_name=user).items(limit), unit="tweet", total=limit):
+    for tweet in tqdm(tweepy.Cursor(api.user_timeline, screen_name=user).items(limit), unit="tweets", total=limit):
         process_tweet(tweet)
-    
-    create_graphs()
 
-def print_report():
-    return
 
-def create_graphs():
 
+""" Print stats to terminal"""
+def print_stats(data, amount=10):
+    total = sum(data.values())
+    count = 0
+    if total:
+        sortedKeys = sorted(data, key=data.get, reverse=True)
+        max_len_key = max([len(x) for x in sortedKeys][:amount])
+        for key in sortedKeys:
+            print(("- \033[1m{:<%d}\033[0m {:>6} {:<4}" % max_len_key
+                    ).format(key, data[key], "(%d%%)" % ((float(data[key]) / total) * 100))
+                    ).encode(sys.stdout.encoding, errors='replace')
+
+            count += 1
+            if count >= amount:
+                break
+    else:
+        print("No data found")
+
+    print("")
+
+
+
+""" Create heatmap of user activity """
+def graph_data(numOfTweets, utcOffset):
     Index = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     Cols = ["%.2d:00" %x for x in range(24)]
-    activity = pd.DataFrame(activityMatrix, index=Index, columns=Cols)
-
-    heatmap = sns.heatmap(activity, annot=True, linewidths=0.5)
+    activityDf = pd.DataFrame(activityMatrix, index=Index, columns=Cols)
+    heatmapAxes = sns.heatmap(activityDf, annot=True)
+    heatmapAxes.set_title('Heatmap of @%s Twitter Activity \n Generated %s for last %s tweets' %(args.name, datetime.date.today(), numOfTweets), fontsize=14)
+    plt.xlabel("Time (UTC offset in seconds: %s)" %utcOffset)
+    plt.yticks(rotation=0)
     plt.show()
+
 
 
 def main():
@@ -128,27 +153,55 @@ def main():
     print("[[-]] Getting @%s account information..." %args.name)
 
     user = api.get_user(screen_name=args.name)
-    numOfTweets = np.amin([args.limit, user.statuses_count])
+    numOfTweets = min([args.limit, user.statuses_count])
 
-    print("[[-]] name           : %s" %user.name)
-    print("[[-]] description    : %s" %user.description)
-    print("[[-]] followers      : %s" %user.followers_count)
-    print("[[-]] following      : %s" %user.friends_count)
-    print("[[-]] language       : %s" %user.lang)
-    print("[[-]] geo enabled    : %s" %user.geo_enabled)
-    print("[[-]] location       : %s" %user.location)
-    print("[[-]] time zone      : %s" %user.time_zone)
-    print("[[-]] utc offset     : %s" %user.utc_offset)
+    print("[[-]] Name           : %s" %user.name)
+    print("[[-]] Description    : %s" %user.description).encode(sys.stdout.encoding, errors='replace')
+    print("[[-]] Followers      : %s" %user.followers_count)
+    print("[[-]] Following      : %s" %user.friends_count)
+    print("[[-]] Language       : %s" %user.lang)
+    print("[[-]] Geo Enabled    : %s" %user.geo_enabled)
+    print("[[-]] Location       : %s" %user.location)
+    print("[[-]] Time zone      : %s" %user.time_zone)
+    print("[[-]] UTC offset     : %s" %user.utc_offset)
     
 
     if(args.utc_offset):
         print("[[!]] applying timezone offset of %s s" %args.utc_offset)
 
-    print("[[-]] tweets         : %s" %user.statuses_count)
+    print("[[-]] Total tweets   : %s" %user.statuses_count)
     print("")
     print("[[-]] Retrieving last %s tweets..." %numOfTweets)
+
+    if(numOfTweets == 0):
+        sys.exit()
+
     get_tweets(api, args.name, numOfTweets)
-    print("[[-]] Success! Tweets retrieved from %s to %s (%s days)" %( startDate, endDate, (endDate - startDate).days ))
+    print("[[-]] Success! Tweets retrieved from %s to %s (%s days)\n" %( startDate, endDate, (endDate - startDate).days ))
+
+    print("[[-]] Top 10 Detected Hashtags")
+    print_stats(detectedHashtags)
+    
+    print("[[-]] Top 10 Mentioned Websites")
+    print_stats(detectedUrls)
+
+    print("[[-]] Top 10 Mentioned Users")
+    print_stats(mentionedUsers)
+
+    print("[[-]] Top 10 Retweeted Users")
+    print_stats(retweetedUsers)
+
+    print("[[-]] Top 10 Detected Locations")
+    print_stats(detetctedLocations)
+
+    print("[[-]] Top 10 Detected Devices")
+    print_stats(detectedDevices)
+
+    utcOffset = args.utc_offset if args.utc_offset else user.utc_offset
+    utcOffset = 0 if args.no_timezone else utcOffset
+    graph_data(numOfTweets, utcOffset)
+
+
 
 if __name__ == "__main__":
     try:
@@ -158,4 +211,3 @@ if __name__ == "__main__":
     except Exception as e:
         print("\nError: %s" %e)
         traceback.print_exc()
-
