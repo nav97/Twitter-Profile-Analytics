@@ -27,7 +27,7 @@ parser = argparse.ArgumentParser(description="Twitter Profile Analyzer (https://
 parser.add_argument('-n', '--name', required=True, metavar="screen_name", 
                     help='The specified twitter user screen name')
 parser.add_argument('-l', '--limit', metavar='N', type=int, default=1000, 
-                    help='Specify the number of tweets to retreive going back from the latest tweet (default to 1000)')
+                    help='Specify the number of tweets to retrieve going back from the latest tweet (default to 1000)')
 parser.add_argument('--utc-offset', type=int,
                     help='Apply timezone offset (in seconds)')
 parser.add_argument('--no-timezone', action='store_true',
@@ -94,7 +94,7 @@ def process_tweet(tweet):
         for user in tweet.entities['user_mentions']:
             mentionedUsers[user['screen_name']] += 1
 
-    #Update detetcted locations
+    #Update detected locations
     if(tweet.place):
         detetctedLocations[tweet.place.name] += 1
 
