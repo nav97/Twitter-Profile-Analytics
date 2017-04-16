@@ -35,7 +35,7 @@ parser.add_argument('--no-timezone', action='store_true',
 
 args = parser.parse_args()
 
-""" GLOBAL VARIABLES (to store data)"""
+"""GLOBAL VARIABLES (to store data)"""
 startDate = 0
 endDate = 0
 
@@ -50,7 +50,7 @@ activityMatrix = np.zeros((7, 24))
 
 
 
-""" Process and analyze a single tweet, updating our data"""
+"""Process and analyze a single tweet, updating our data"""
 def process_tweet(tweet):
     global startDate
     global endDate
@@ -103,22 +103,22 @@ def process_tweet(tweet):
 
 
 
-""" Download Tweets from user account """
+"""Download Tweets from user account"""
 def get_tweets(api, user, limit):
     for tweet in tqdm(tweepy.Cursor(api.user_timeline, screen_name=user).items(limit), unit="tweets", total=limit):
         process_tweet(tweet)
 
 
 
-""" Print stats to terminal"""
+"""Print stats to terminal"""
 def print_stats(data, amount=10):
     total = sum(data.values())
     count = 0
     if total:
         sortedKeys = sorted(data, key=data.get, reverse=True)
-        max_len_key = max([len(x) for x in sortedKeys][:amount])
+        maxKeyLength = max([len(x) for x in sortedKeys])
         for key in sortedKeys:
-            print(("- \033[1m{:<%d}\033[0m {:>6} {:<4}" % max_len_key
+            print(("- \033[1m{:<%d}\033[0m {:>6} {:<4}" % maxKeyLength
                     ).format(key, data[key], "(%d%%)" % ((float(data[key]) / total) * 100))
                     ).encode(sys.stdout.encoding, errors='replace')
 
@@ -132,7 +132,7 @@ def print_stats(data, amount=10):
 
 
 
-""" Create heatmap of user activity """
+"""Create heatmap of user activity"""
 def graph_data(numOfTweets, utcOffset):
     Index = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     Cols = ["%.2d:00" %x for x in range(24)]
