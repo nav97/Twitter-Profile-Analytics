@@ -1,4 +1,4 @@
-# Tweet-Analyzer
+# Twitter-Profile-Analytics
 
 ### Installation
 
@@ -30,6 +30,6 @@ optional arguments:
 
 ### Example
 
-![alt tag](https://raw.githubusercontent.com/nav97/Tweet-Analyzer/master/Screenshots/Capture1.PNG)
-![alt tag](https://raw.githubusercontent.com/nav97/Tweet-Analyzer/master/Screenshots/Capture2.PNG)
-![alt tag](https://raw.githubusercontent.com/nav97/Tweet-Analyzer/master/Screenshots/Capture3.PNG)
+![alt tag](https://raw.githubusercontent.com/nav97/Twitter-Profile-Analytics/master/Screenshots/Capture1.PNG)
+![alt tag](https://raw.githubusercontent.com/nav97/Twitter-Profile-Analytics/master/Screenshots/Capture2.PNG)
+![alt tag](https://raw.githubusercontent.com/nav97/Twitter-Profile-Analytics/master/Screenshots/Capture3.PNG)
