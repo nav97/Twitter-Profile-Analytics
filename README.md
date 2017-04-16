@@ -32,4 +32,4 @@ optional arguments:
 
 ![alt tag](https://raw.githubusercontent.com/nav97/Twitter-Profile-Analytics/master/Screenshots/Capture1.PNG)
 ![alt tag](https://raw.githubusercontent.com/nav97/Twitter-Profile-Analytics/master/Screenshots/Capture2.PNG)
-![alt tag](https://raw.githubusercontent.com/nav97/Twitter-Profile-Analytics/master/Screenshots/Capture3.PNG)
+![alt tag](https://raw.githubusercontent.com/nav97/Twitter-Profile-Analytics/master/Screenshots/Capture3.png)
