@@ -1,12 +1,17 @@
 # Tweet-Analyzer
 
 ### Installation
+
+To install all the required libraries:
 ```sh
 pip install -r requirements.txt
 ```
 Requires Python version 2.7+
 
 ### Usage 
+
+After installing all the required libraries the user must place their Twitter API keys in the `auth.py` file. These keys can be obtained from  https://apps.twitter.com/
+
 ```
 usage: -n <screen_name> [options]
 
