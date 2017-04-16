@@ -2,7 +2,7 @@
 
 ### Installation
 
-To install all the required libraries:
+To install all the required libraries needed:
 ```sh
 pip install -r requirements.txt
 ```
@@ -29,6 +29,7 @@ optional arguments:
 ```
 
 ### Example
+
 ![alt tag](https://raw.githubusercontent.com/nav97/Tweet-Analyzer/master/Screenshots/Capture1.PNG)
 ![alt tag](https://raw.githubusercontent.com/nav97/Tweet-Analyzer/master/Screenshots/Capture2.PNG)
 ![alt tag](https://raw.githubusercontent.com/nav97/Tweet-Analyzer/master/Screenshots/Capture3.PNG)
