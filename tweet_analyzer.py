@@ -36,70 +36,70 @@ parser.add_argument('--no-timezone', action='store_true',
 args = parser.parse_args()
 
 """GLOBAL VARIABLES (to store data)"""
-startDate = 0
-endDate = 0
+start_date = 0
+end_date = 0
 
-detectedUrls = collections.Counter()
-detectedHashtags = collections.Counter()
-mentionedUsers = collections.Counter()
-retweetedUsers = collections.Counter()
-detetctedLocations = collections.Counter()
-detectedDevices = collections.Counter()
+detected_urls = collections.Counter()
+detected_hashtags = collections.Counter()
+mentioned_users = collections.Counter()
+retweeted_users = collections.Counter()
+detected_locations = collections.Counter()
+detected_devices = collections.Counter()
 
-activityMatrix = np.zeros((7, 24))
+activity_matrix = np.zeros((7, 24))
 
 
 
 """Process and analyze a single tweet, updating our data"""
 def process_tweet(tweet):
-    global startDate
-    global endDate
+    global start_date
+    global end_date
 
     #Date in UTC
-    dateOfTweet = tweet.created_at
+    date_of_tweet = tweet.created_at
     
     #Adjust time based off user specified offset which overrides profile settings
     if(args.utc_offset):
-        dateOfTweet = (tweet.created_at + datetime.timedelta(seconds=args.utc_offset))
+        date_of_tweet = (tweet.created_at + datetime.timedelta(seconds=args.utc_offset))
     
     #Auto adjust time based off user profile location
     elif(tweet.user.utc_offset and not args.no_timezone):
-        dateOfTweet = (tweet.created_at + datetime.timedelta(seconds=tweet.user.utc_offset))
+        date_of_tweet = (tweet.created_at + datetime.timedelta(seconds=tweet.user.utc_offset))
 
     #Range of tweets analyzed in specified timezone
-    endDate = endDate or dateOfTweet
-    startDate = dateOfTweet
+    end_date = end_date or date_of_tweet
+    start_date = date_of_tweet
 
-    #Update activityMatrix for heatmap
-    activityMatrix[dateOfTweet.weekday()][dateOfTweet.hour] += 1
+    #Update activity_matrix for heatmap
+    activity_matrix[date_of_tweet.weekday()][date_of_tweet.hour] += 1
 
     #Update Domain Urls detected
     if(tweet.entities['urls']):
         for url in tweet.entities['urls']:
             domain = urlparse(url['expanded_url']).netloc
             domain = regex.sub('www.', '', domain)
-            detectedUrls[domain] += 1 if (domain != "twitter.com") else (0)
+            detected_urls[domain] += 1 if (domain != "twitter.com") else (0)
 
     #Update Retweets
     if hasattr(tweet, 'retweeted_status'):
-        retweetedUsers[tweet.retweeted_status.user.screen_name] += 1
+        retweeted_users[tweet.retweeted_status.user.screen_name] += 1
 
     #Update Hashtag List
     if(tweet.entities['hashtags']):
         for hashtag in tweet.entities['hashtags']:
-            detectedHashtags[hashtag['text']] += 1
+            detected_hashtags[hashtag['text']] += 1
 
     #Update Mentioned Users
     if(tweet.entities['user_mentions']):
         for user in tweet.entities['user_mentions']:
-            mentionedUsers[user['screen_name']] += 1
+            mentioned_users[user['screen_name']] += 1
 
     #Update detected locations
     if(tweet.place):
-        detetctedLocations[tweet.place.name] += 1
+        detected_locations[tweet.place.name] += 1
 
     #Update detected devices
-    detectedDevices[tweet.source] += 1
+    detected_devices[tweet.source] += 1
 
 
 
@@ -133,13 +133,13 @@ def print_stats(data, amount=10):
 
 
 """Create heatmap of user activity"""
-def graph_data(numOfTweets, utcOffset):
-    Index = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    Cols = ["%.2d:00" %x for x in range(24)]
-    activityDf = pd.DataFrame(activityMatrix, index=Index, columns=Cols)
-    heatmapAxes = sns.heatmap(activityDf, annot=True)
-    heatmapAxes.set_title('Heatmap of @%s Twitter Activity \n Generated %s for last %s tweets' %(args.name, datetime.date.today(), numOfTweets), fontsize=14)
-    plt.xlabel("Time (UTC offset in seconds: %s)" %utcOffset)
+def graph_data(num_of_tweets, utc_offset):
+    index = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    cols = ["%.2d:00" %x for x in range(24)]
+    df_activity = pd.DataFrame(activity_matrix, index=index, columns=cols)
+    axes = sns.heatmap(df_activity, annot=True)
+    axes.set_title('Heatmap of @%s Twitter Activity \n Generated %s for last %s tweets' %(args.name, datetime.date.today(), num_of_tweets), fontsize=14)
+    plt.xlabel("Time (UTC offset in seconds: %s)" %utc_offset)
     plt.yticks(rotation=0)
     plt.show()
 
@@ -153,7 +153,7 @@ def main():
     print("[[-]] Getting @%s account information..." %args.name)
 
     user = api.get_user(screen_name=args.name)
-    numOfTweets = min([args.limit, user.statuses_count])
+    num_of_tweets = min([args.limit, user.statuses_count])
 
     print("[[-]] Name           : %s" %user.name)
     print("[[-]] Description    : %s" %user.description).encode(sys.stdout.encoding, errors='replace')
@@ -171,35 +171,35 @@ def main():
 
     print("[[-]] Total tweets   : %s" %user.statuses_count)
     print("")
-    print("[[-]] Retrieving last %s tweets..." %numOfTweets)
+    print("[[-]] Retrieving last %s tweets..." %num_of_tweets)
 
-    if(numOfTweets == 0):
+    if(num_of_tweets == 0):
         sys.exit()
 
-    get_tweets(api, args.name, numOfTweets)
-    print("[[-]] Success! Tweets retrieved from %s to %s (%s days)\n" %( startDate, endDate, (endDate - startDate).days ))
+    get_tweets(api, args.name, num_of_tweets)
+    print("[[-]] Success! Tweets retrieved from %s to %s (%s days)\n" %( start_date, end_date, (end_date - start_date).days ))
 
     print("[[-]] Top 10 Detected Hashtags")
-    print_stats(detectedHashtags)
+    print_stats(detected_hashtags)
     
     print("[[-]] Top 10 Mentioned Websites")
-    print_stats(detectedUrls)
+    print_stats(detected_urls)
 
     print("[[-]] Top 10 Mentioned Users")
-    print_stats(mentionedUsers)
+    print_stats(mentioned_users)
 
     print("[[-]] Top 10 Retweeted Users")
-    print_stats(retweetedUsers)
+    print_stats(retweeted_users)
 
     print("[[-]] Top 10 Detected Locations")
-    print_stats(detetctedLocations)
+    print_stats(detected_locations)
 
     print("[[-]] Top 10 Detected Devices")
-    print_stats(detectedDevices)
+    print_stats(detected_devices)
 
-    utcOffset = args.utc_offset if args.utc_offset else user.utc_offset
-    utcOffset = 0 if args.no_timezone else utcOffset
-    graph_data(numOfTweets, utcOffset)
+    utc_offset = args.utc_offset if args.utc_offset else user.utc_offset
+    utc_offset = 0 if args.no_timezone else utc_offset
+    graph_data(num_of_tweets, utc_offset)
 
 
 
