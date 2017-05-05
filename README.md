@@ -6,7 +6,7 @@ To install all the required libraries needed:
 ```sh
 pip install -r requirements.txt
 ```
-Requires Python version 2.7+
+Requires Python version 2.7+ (Works with Python 3)
 
 ### Usage 
 
@@ -25,7 +25,7 @@ optional arguments:
                         from the latest tweet (default to 1000)
   --utc-offset UTC_OFFSET
                         Apply timezone offset (in seconds)
-  --no-timezone         Remove timezone auto-adjustment (default to UTC)
+  --no-timezone         Remove time zone auto-adjustment (default to UTC)
 ```
 
 ### Example
