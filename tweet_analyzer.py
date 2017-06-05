@@ -35,7 +35,7 @@ parser.add_argument('--no-timezone', action='store_true',
 
 args = parser.parse_args()
 
-"""GLOBAL VARIABLES (to store data)"""
+"""GLOBAL VARIABLES"""
 start_date = 0
 end_date = 0
 
@@ -46,7 +46,7 @@ retweeted_users = collections.Counter()
 detected_locations = collections.Counter()
 detected_devices = collections.Counter()
 
-activity_matrix = np.zeros((7, 24))
+daily_activity_matrix = np.zeros((7, 24))
 
 
 
@@ -70,8 +70,8 @@ def process_tweet(tweet):
     end_date = end_date or date_of_tweet
     start_date = date_of_tweet
 
-    #Update activity_matrix for heatmap
-    activity_matrix[date_of_tweet.weekday()][date_of_tweet.hour] += 1
+    #Update daily_activity_matrix for heatmap, (0-6 is mon-sun)
+    daily_activity_matrix[date_of_tweet.weekday()][date_of_tweet.hour] += 1
 
     #Update Domain Urls detected
     if(tweet.entities['urls']):
@@ -133,10 +133,10 @@ def print_stats(data, amount=10):
 
 
 """Create heatmap of user activity"""
-def graph_data(num_of_tweets, utc_offset):
+def graph_heatmap(num_of_tweets, utc_offset):
     index = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     cols = ["%.2d:00" %x for x in range(24)]
-    df_activity = pd.DataFrame(activity_matrix, index=index, columns=cols)
+    df_activity = pd.DataFrame(daily_activity_matrix, index=index, columns=cols)
     axes = sns.heatmap(df_activity, annot=True)
     axes.set_title('Heatmap of @%s Twitter Activity \n Generated %s for last %s tweets' %(args.name, datetime.date.today(), num_of_tweets), fontsize=14)
     plt.xlabel("Time (UTC offset in seconds: %s)" %utc_offset)
@@ -199,7 +199,7 @@ def main():
 
     utc_offset = args.utc_offset if args.utc_offset else user.utc_offset
     utc_offset = 0 if args.no_timezone else utc_offset
-    graph_data(num_of_tweets, utc_offset)
+    graph_heatmap(num_of_tweets, utc_offset)
 
 
 
